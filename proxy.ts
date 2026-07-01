@@ -50,6 +50,13 @@ export async function proxy(request: NextRequest) {
 
     const role = profile?.role
 
+    // Bounce already logged-in users away from auth forms straight to their workspace
+    if (url.pathname.startsWith('/login') || url.pathname.startsWith('/register')) {
+      url.pathname = role === 'INSTRUCTOR' ? '/admin' : '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+
     // Restrict student from entering instructor admin panel
     if (url.pathname.startsWith('/admin') && role !== 'INSTRUCTOR') {
       url.pathname = '/dashboard'
