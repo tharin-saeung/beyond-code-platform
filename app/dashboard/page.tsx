@@ -1,4 +1,9 @@
+import type { Metadata } from 'next'
 import { createClient } from '../../utils/supabase/server'
+
+export const metadata: Metadata = {
+  title: 'Student Dashboard',
+}
 import { signout } from '../auth/actions'
 import Link from 'next/link'
 

@@ -134,11 +134,16 @@ export default function AssignmentWorkspace({
     const hydrateWorkspace = async () => {
       try {
         const supabase = createClient()
-        // Query the single latest submission for this assignment
+        // Get currently authenticated user to prevent profile query leaks
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Query the single latest submission for this assignment belonging exclusively to this user
         const { data: latestSubmission } = await supabase
           .from('submissions')
           .select('*')
           .eq('assignment_id', assignment.id)
+          .eq('student_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()

@@ -1,9 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Editor from '@monaco-editor/react'
 import { signout } from '../auth/actions'
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Cell
+} from 'recharts'
 
 interface Submission {
   id: string
@@ -115,6 +124,11 @@ export default function AdminDashboardClient({
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'date' | 'score'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSort = (field: 'date' | 'score') => {
     if (sortBy === field) {
@@ -193,6 +207,16 @@ export default function AdminDashboardClient({
       return sortOrder === 'asc' ? a.score - b.score : b.score - a.score
     }
   })
+
+  const excellentCount = submissions.filter((s) => s.score >= 80).length
+  const averageCount = submissions.filter((s) => s.score >= 40 && s.score < 80).length
+  const needsReviewCount = submissions.filter((s) => s.score < 40).length
+
+  const chartData = [
+    { name: 'Needs Review (0-39)', value: needsReviewCount, fill: 'url(#needsReviewGrad)' },
+    { name: 'Average (40-79)', value: averageCount, fill: 'url(#averageGrad)' },
+    { name: 'Excellent (80-100)', value: excellentCount, fill: 'url(#excellentGrad)' },
+  ]
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100 relative overflow-hidden select-none">
@@ -327,6 +351,89 @@ export default function AdminDashboardClient({
               </span>
               <span className="text-xs text-slate-450">/ 100 max</span>
             </div>
+          </div>
+        </div>
+
+        {/* Recharts Performance Distribution Chart */}
+        <div className="w-full backdrop-blur-md bg-slate-900/40 border border-slate-850 p-6 rounded-2xl min-h-[300px] mb-8">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Performance Distribution
+            </h3>
+          </div>
+
+          <div className="w-full mt-2">
+            {mounted ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="needsReviewGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#9f1239" stopOpacity={0.3} />
+                    </linearGradient>
+                    <linearGradient id="averageGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#b45309" stopOpacity={0.3} />
+                    </linearGradient>
+                    <linearGradient id="excellentGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.3} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#475569" 
+                    fontSize={10} 
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis 
+                    stroke="#475569" 
+                    fontSize={10} 
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(148, 163, 184, 0.05)', radius: 8 }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload
+                        const indicatorColor = 
+                          data.name.startsWith('Excellent') ? 'bg-violet-500' :
+                          data.name.startsWith('Average') ? 'bg-amber-500' : 'bg-rose-500'
+                        return (
+                          <div className="bg-slate-900/90 border border-slate-800 backdrop-blur-md px-3.5 py-2.5 rounded-xl shadow-2xl text-xs font-mono">
+                            <div className="flex items-center gap-2 font-bold text-slate-200">
+                              <span className={`h-1.5 w-1.5 rounded-full ${indicatorColor}`} />
+                              {data.name}
+                            </div>
+                            <p className="text-slate-450 mt-1.5">
+                              Submissions: <span className="text-white font-extrabold">{data.value}</span>
+                            </p>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.fill} 
+                        className="hover:opacity-100 cursor-pointer transition-all duration-200"
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[200px] w-full flex items-center justify-center text-xs text-slate-500 font-mono">
+                Initializing charting layout...
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,4 +1,9 @@
+import type { Metadata } from 'next'
 import { createClient } from '../../../utils/supabase/server'
+
+export const metadata: Metadata = {
+  title: 'Manage Question Bank',
+}
 import { redirect } from 'next/navigation'
 import AssignmentManager from './assignment-manager'
 

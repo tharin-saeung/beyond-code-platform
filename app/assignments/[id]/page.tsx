@@ -1,9 +1,29 @@
+import type { Metadata } from 'next'
 import { createClient } from '../../../utils/supabase/server'
 import AssignmentWorkspace from './assignment-workspace'
 import Link from 'next/link'
 
 interface PageProps {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('assignments')
+      .select('title')
+      .eq('id', id)
+      .single()
+    return {
+      title: data?.title || 'Coding Challenge',
+    }
+  } catch {
+    return {
+      title: 'Coding Challenge',
+    }
+  }
 }
 
 export default async function AssignmentPage({ params }: PageProps) {

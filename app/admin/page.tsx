@@ -1,4 +1,9 @@
+import type { Metadata } from 'next'
 import { createClient } from '../../utils/supabase/server'
+
+export const metadata: Metadata = {
+  title: 'Instructor Control Plane',
+}
 import { redirect } from 'next/navigation'
 import AdminDashboardClient from './admin-dashboard'
 
