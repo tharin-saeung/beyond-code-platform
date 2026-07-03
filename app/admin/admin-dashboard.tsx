@@ -125,6 +125,7 @@ export default function AdminDashboardClient({
   const [sortBy, setSortBy] = useState<'date' | 'score'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [mounted, setMounted] = useState(false)
+  const [selectedAssignment, setSelectedAssignment] = useState<string>('all')
 
   useEffect(() => {
     setMounted(true)
@@ -189,16 +190,24 @@ export default function AdminDashboardClient({
     }
   }
 
-  // Filter submissions by student email or assignment title
-  const filteredSubmissions = submissions.filter((sub) => {
+  // Extract unique assignment titles
+  const uniqueAssignments = Array.from(new Set(submissions.map(s => getAssignmentTitle(s))))
+
+  // Filter submissions by assignment dropdown selection
+  const filteredSubmissions = selectedAssignment === 'all'
+    ? submissions
+    : submissions.filter(s => getAssignmentTitle(s) === selectedAssignment)
+
+  // Filter submissions by search query text
+  const searchedSubmissions = filteredSubmissions.filter((sub) => {
     const email = getStudentEmail(sub).toLowerCase()
     const title = getAssignmentTitle(sub).toLowerCase()
     const query = searchQuery.toLowerCase()
     return email.includes(query) || title.includes(query)
   })
 
-  // Sort submissions based on selected field and order
-  const sortedSubmissions = [...filteredSubmissions].sort((a, b) => {
+  // Sort filtered and searched submissions
+  const sortedSubmissions = [...searchedSubmissions].sort((a, b) => {
     if (sortBy === 'date') {
       const timeA = new Date(a.created_at).getTime()
       const timeB = new Date(b.created_at).getTime()
@@ -208,9 +217,9 @@ export default function AdminDashboardClient({
     }
   })
 
-  const excellentCount = submissions.filter((s) => s.score >= 80).length
-  const averageCount = submissions.filter((s) => s.score >= 40 && s.score < 80).length
-  const needsReviewCount = submissions.filter((s) => s.score < 40).length
+  const excellentCount = filteredSubmissions.filter((s) => s.score >= 80).length
+  const averageCount = filteredSubmissions.filter((s) => s.score >= 40 && s.score < 80).length
+  const needsReviewCount = filteredSubmissions.filter((s) => s.score < 40).length
 
   const chartData = [
     { name: 'Needs Review (0-39)', value: needsReviewCount, fill: 'url(#needsReviewGrad)' },
@@ -319,7 +328,7 @@ export default function AdminDashboardClient({
             </span>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-extrabold text-slate-100">
-                {submissions.length}
+                {filteredSubmissions.length}
               </span>
               <span className="text-xs text-slate-450">runs compiled</span>
             </div>
@@ -331,10 +340,10 @@ export default function AdminDashboardClient({
             </span>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-extrabold text-emerald-400">
-                {submissions.filter((s) => s.score >= 80).length}
+                {filteredSubmissions.filter((s) => s.score >= 80).length}
               </span>
               <span className="text-xs text-slate-450">
-                ({submissions.length ? Math.round((submissions.filter((s) => s.score >= 80).length / submissions.length) * 100) : 0}%)
+                ({filteredSubmissions.length ? Math.round((filteredSubmissions.filter((s) => s.score >= 80).length / filteredSubmissions.length) * 100) : 0}%)
               </span>
             </div>
           </div>
@@ -345,8 +354,8 @@ export default function AdminDashboardClient({
             </span>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-extrabold text-violet-400">
-                {submissions.length
-                  ? Math.round(submissions.reduce((acc, s) => acc + s.score, 0) / submissions.length)
+                {filteredSubmissions.length
+                  ? Math.round(filteredSubmissions.reduce((acc, s) => acc + s.score, 0) / filteredSubmissions.length)
                   : 0}
               </span>
               <span className="text-xs text-slate-450">/ 100 max</span>
@@ -356,11 +365,33 @@ export default function AdminDashboardClient({
 
         {/* Recharts Performance Distribution Chart */}
         <div className="w-full backdrop-blur-md bg-slate-900/40 border border-slate-850 p-6 rounded-2xl min-h-[300px] mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <span className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Performance Distribution
-            </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Performance Distribution
+              </h3>
+            </div>
+            
+            <div className="relative">
+              <select
+                value={selectedAssignment}
+                onChange={(e) => setSelectedAssignment(e.target.value)}
+                className="appearance-none bg-slate-900/80 border border-slate-800 text-slate-200 rounded-xl py-1.5 pl-3.5 pr-8 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500 transition-all text-xs font-mono cursor-pointer"
+              >
+                <option value="all">All Assignments</option>
+                {uniqueAssignments.map((title) => (
+                  <option key={title} value={title}>
+                    {title}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           <div className="w-full mt-2">
@@ -462,7 +493,7 @@ export default function AdminDashboardClient({
             />
           </div>
           <div className="text-xs text-slate-500 font-mono">
-            Showing {filteredSubmissions.length} of {submissions.length} records
+            Showing {searchedSubmissions.length} of {submissions.length} records
           </div>
         </div>
 
